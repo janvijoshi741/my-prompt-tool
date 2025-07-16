@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -7,6 +7,8 @@ import {
 } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { saveUserToFirestore } from "../lib/firestore";
+import { BiLoaderCircle } from "react-icons/bi";
+import { FiLoader } from "react-icons/fi";
 
 export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
@@ -85,12 +87,10 @@ export default function AuthForm() {
           </p>
         </div>
 
-        {/* --- MODIFIED FORM LAYOUT --- */}
         <form
           className="mt-8 flex flex-col items-center gap-y-4 border border-gray-800"
           onSubmit={handleSubmit}
         >
-          {/* Name Input */}
           {!isLogin && (
             <div className="relative  max-w-sm">
               <input
@@ -153,7 +153,7 @@ export default function AuthForm() {
             >
               {loading && <FiLoader className="animate-spin h-5 w-5 mr-3" />}
               {loading ? (
-                <BiLoaderCircle className="animate-spin" />
+                <BiLoaderCircle className="animate-spin w-6 h-6" />
               ) : isLogin ? (
                 "Sign In"
               ) : (
@@ -162,7 +162,6 @@ export default function AuthForm() {
             </button>
           </div>
 
-          {/* Auth Switch */}
           <div className="text-center pt-4">
             <button
               type="button"

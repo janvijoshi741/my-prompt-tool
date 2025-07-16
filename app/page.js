@@ -3,13 +3,13 @@ import { useState, useEffect } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "./lib/firebase";
 import AuthForm from "./components/AuthForm";
-import ChatUI from "./components/ChatUI";
+import ChatUI from "./components/chat/ChatUI";
 import { useTheme } from "./components/ThemeProvider";
 import { HiLightBulb } from "react-icons/hi";
 import { HiOutlineLightBulb } from "react-icons/hi";
 import { BiLoaderCircle } from "react-icons/bi";
 
-export default function Home() {
+export default function Page() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -19,6 +19,12 @@ export default function Home() {
     const unsub = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
+
+      if (user) {
+        localStorage.setItem("user", JSON.stringify(user));
+      } else {
+        localStorage.removeItem("user");
+      }
     });
     return () => unsub();
   }, []);
@@ -26,7 +32,7 @@ export default function Home() {
   if (loading)
     return (
       <p className="text-center text-white p-6">
-        <BiLoaderCircle className="animate-spin-fast w-6 h-6" />
+        <BiLoaderCircle className="animate-spin w-10 h-10" />
       </p>
     );
 
@@ -55,7 +61,7 @@ export default function Home() {
         </div>
       </div>
 
-      <ChatUI user={user} />
+      <ChatUI />
     </main>
   );
 }

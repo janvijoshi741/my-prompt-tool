@@ -1,14 +1,25 @@
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  getDoc,
+  onSnapshot,
+  setDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import { db } from "./firebase";
 
 // Save user data to Firestore
-
 export const saveUserToFirestore = async (user, additionalData = {}) => {
   if (!user) return;
 
   const userRef = doc(db, "users", user.uid);
-
-  // Check if user document already exists
   const userDoc = await getDoc(userRef);
 
   if (!userDoc.exists()) {
@@ -28,7 +39,6 @@ export const saveUserToFirestore = async (user, additionalData = {}) => {
       throw error;
     }
   } else {
-    // Update last login time for existing user
     try {
       await setDoc(
         userRef,
@@ -45,11 +55,7 @@ export const saveUserToFirestore = async (user, additionalData = {}) => {
   }
 };
 
-/**
- * Get user data from Firestore
- *  userId - User ID
- *  User data or null if not found
- */
+// Get user by userId
 export const getUserFromFirestore = async (userId) => {
   if (!userId) return null;
 
@@ -67,4 +73,102 @@ export const getUserFromFirestore = async (userId) => {
     console.error("Error getting user from Firestore:", error);
     throw error;
   }
+};
+
+// Chat service using subcollections under users
+export const chatService = {
+  // Create new chat under user
+  async createChat(userId, title) {
+    const chatData = {
+      title,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      isActive: true,
+    };
+
+    const chatsRef = collection(db, "users", userId, "chats");
+    const docRef = await addDoc(chatsRef, chatData);
+    return docRef.id;
+  },
+
+  // Get user's chats (only active)
+  async getUserChats(userId) {
+    const q = query(
+      collection(db, "users", userId, "chats"),
+      where("isActive", "==", true)
+      // orderBy("updatedAt", "desc")
+    );
+
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+  },
+
+  // Add message to chat (nested under user's chat)
+  async addMessage(userId, chatId, message) {
+    const messageData = {
+      ...message,
+      timestamp: serverTimestamp(),
+    };
+
+    const messagesRef = collection(
+      db,
+      "users",
+      userId,
+      "chats",
+      chatId,
+      "messages"
+    );
+    await addDoc(messagesRef, messageData);
+
+    // Update chat's updatedAt
+    await updateDoc(doc(db, "users", userId, "chats", chatId), {
+      updatedAt: serverTimestamp(),
+    });
+  },
+
+  // Get chat messages
+  async getChatMessages(userId, chatId) {
+    const q = query(
+      collection(db, "users", userId, "chats", chatId, "messages"),
+      orderBy("timestamp", "asc")
+    );
+
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+  },
+
+  // Subscribe to chat messages
+  subscribeToMessages(userId, chatId, callback) {
+    if (!userId || !chatId) {
+      console.error("subscribeToMessages called with missing userId or chatId");
+      return () => {};
+    }
+    // console.log("subscribeToMessages userId:", userId, typeof userId);
+    // console.log("subscribeToMessages chatId:", chatId, typeof chatId);
+    const q = query(
+      collection(db, "users", userId, "chats", chatId, "messages")
+      // orderBy("timestamp", "asc")
+    );
+
+    return onSnapshot(q, (snapshot) => {
+      const messages = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      callback(messages);
+    });
+  },
+
+  // Soft delete chat (mark inactive)
+  async deleteChat(userId, chatId) {
+    await updateDoc(doc(db, "users", userId, "chats", chatId), {
+      isActive: false,
+    });
+  },
 };

@@ -7,7 +7,7 @@ const ai = new GoogleGenAI({
 
 export async function POST(req) {
   const body = await req.json();
-  const { message } = body;
+  const { chatId, message } = body;
   if (!message) {
     return NextResponse.json({ error: "No message provided" }, { status: 400 });
   }
@@ -27,7 +27,8 @@ export async function POST(req) {
     });
 
     const reply = response;
-    return NextResponse.json({ reply });
+    // console.log("Gemini from server", reply);
+    return NextResponse.json({ reply, chatId });
   } catch (error) {
     console.error("Google GenAI Error:", error?.message);
     return NextResponse.json(
